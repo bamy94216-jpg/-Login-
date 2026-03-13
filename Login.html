@@ -81,6 +81,7 @@
             color: #fff;
             text-align: center;
             padding: 20px;
+            max-width: 400px;
         }
         .success-page img {
             max-width: 100%;
@@ -93,73 +94,198 @@
             border-radius: 8px;
             margin-top: 20px;
         }
+        .change-pwd-btn {
+            margin-top: 20px;
+            padding: 10px;
+            background: #007aff;
+            color: #fff;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            width: 100%;
+        }
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+        }
+        .modal-content {
+            background: #1a1a2e;
+            padding: 30px;
+            border-radius: 12px;
+            width: 90%;
+            max-width: 350px;
+            color: #fff;
+        }
+        .modal h3 {
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        .close-modal {
+            float: right;
+            background: none;
+            border: none;
+            color: #fff;
+            font-size: 20px;
+            cursor: pointer;
+        }
     </style>
 </head>
 <body>
-    <div class="login-box" id="loginPage">
-        <h2>PUBGM 账号登录</h2>
-        <div class="input-group">
-            <label>账号</label>
-            <input type="text" id="account" placeholder="请输入账号">
-        </div>
-        <div class="input-group">
-            <label>密码</label>
-            <input type="password" id="password" placeholder="请输入密码">
-        </div>
-        <button class="login-btn" onclick="login()">登录</button>
-        <div class="error-msg" id="errorMsg">账号或密码错误，请重试</div>
+
+<div class="login-box" id="loginPage">
+    <h2>PUBGM 账号登录</h2>
+    <div class="input-group">
+        <label>账号</label>
+        <input type="text" id="account" placeholder="请输入账号">
     </div>
-
-    <div class="success-page" id="successPage">
-        <h2>登录成功 ✅</h2>
-        <img src="https://picsum.photos/id/237/800/500" alt="PUBGM 游戏界面">
-        <div class="info">
-            <p><strong>账号：</strong><span id="showAccount"></span></p>
-            <p><strong>密码：</strong><span id="showPassword"></span></p>
-        </div>
+    <div class="input-group">
+        <label>密码</label>
+        <input type="password" id="password" placeholder="请输入密码">
     </div>
+    <button class="login-btn" onclick="login()">登录</button>
+    <div class="error-msg" id="errorMsg">账号或密码错误，请重试</div>
+</div>
 
-    <script>
-        let accounts = [];
+<div class="success-page" id="successPage">
+    <h2>登录成功 ✅</h2>
+    <img src="https://picsum.photos/id/237/800/500" alt="PUBGM">
+    <div class="info">
+        <p><strong>账号：</strong><span id="showAccount"></span></p>
+        <p><strong>密码：</strong><span id="showPassword"></span></p>
+    </div>
+    <button class="change-pwd-btn" onclick="openChangePwdModal()">修改密码</button>
+</div>
 
-        // 从你的 GitHub 仓库拉取账号列表
-        async function loadAccounts() {
-            try {
-                const response = await fetch('https://bamy94216-jpg.github.io/-Login-/accounts.json');
-                accounts = await response.json();
-            } catch (error) {
-                console.error('加载账号列表失败', error);
-            }
-        }
+<div class="modal" id="changePwdModal">
+    <div class="modal-content">
+        <button class="close-modal" onclick="closeChangePwdModal()">×</button>
+        <h3>修改密码</h3>
+        <div class="input-group">
+            <label>新密码</label>
+            <input type="password" id="newPassword" placeholder="请输入新密码">
+        </div>
+        <div class="input-group">
+            <label>确认新密码</label>
+            <input type="password" id="confirmPassword" placeholder="再次输入新密码">
+        </div>
+        <button class="login-btn" onclick="changePassword()">确认修改</button>
+        <div class="error-msg" id="pwdErrorMsg" style="display:none;">两次密码不一致</div>
+    </div>
+</div>
 
-        // 登录校验
-        async function login() {
-            if (accounts.length === 0) {
-                await loadAccounts();
-            }
+<script>
+let accounts = [];
+let currentAccount = null;
 
-            const account = document.getElementById('account').value;
-            const password = document.getElementById('password').value;
-            const errorMsg = document.getElementById('errorMsg');
-            const loginPage = document.getElementById('loginPage');
-            const successPage = document.getElementById('successPage');
+// 你的信息（我已经帮你填好了）
+const GITHUB_TOKEN = "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";
+const REPO_OWNER = "bamy94216-jpg";
+const REPO_NAME = "-Login-";
+const FILE_PATH = "accounts.json";
 
-            const matchedAccount = accounts.find(
-                item => item.account === account && item.password === password
-            );
+// 加载账号
+async function loadAccounts() {
+  try {
+    const res = await fetch(`https://${REPO_OWNER}.github.io/${REPO_NAME}/${FILE_PATH}`);
+    accounts = await res.json();
+  } catch (e) {}
+}
 
-            if (matchedAccount) {
-                loginPage.style.display = 'none';
-                successPage.style.display = 'block';
-                errorMsg.style.display = 'none';
-                document.getElementById('showAccount').textContent = matchedAccount.account;
-                document.getElementById('showPassword').textContent = matchedAccount.password;
-            } else {
-                errorMsg.style.display = 'block';
-            }
-        }
+// 登录
+async function login() {
+  if (accounts.length === 0) await loadAccounts();
+  const account = document.getElementById('account').value;
+  const password = document.getElementById('password').value;
+  const user = accounts.find(i => i.account == account && i.password == password);
+  
+  if (user) {
+    currentAccount = user;
+    loginPage.style.display = 'none';
+    successPage.style.display = 'block';
+    showAccount.innerText = user.account;
+    showPassword.innerText = user.password;
+    errorMsg.style.display = 'none';
+  } else {
+    errorMsg.style.display = 'block';
+  }
+}
 
-        window.onload = loadAccounts;
-    </script>
+// 修改密码弹窗
+function openChangePwdModal() {
+  changePwdModal.style.display = 'flex';
+}
+function closeChangePwdModal() {
+  changePwdModal.style.display = 'none';
+  newPassword.value = confirmPassword.value = '';
+  pwdErrorMsg.style.display = 'none';
+}
+
+// 修改密码 + 自动同步 GitHub
+async function changePassword() {
+  const newPwd = newPassword.value;
+  const confirmPwd = confirmPassword.value;
+
+  if (newPwd !== confirmPwd) {
+    pwdErrorMsg.style.display = 'block';
+    return;
+  }
+  if (!currentAccount) return;
+
+  // 更新密码
+  accounts.find(i => i.account === currentAccount.account).password = newPwd;
+  
+  // 同步到 GitHub
+  await updateGitHubAccounts(accounts);
+  
+  showPassword.innerText = newPwd;
+  currentAccount.password = newPwd;
+  closeChangePwdModal();
+  alert('密码修改成功！已同步到云端！');
+}
+
+// 上传到 GitHub
+async function updateGitHubAccounts(newAccounts) {
+  try {
+    // 1. 获取文件 SHA
+    const fileRes = await fetch(
+      `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/${FILE_PATH}`,
+      { headers: { Authorization: `token ${GITHUB_TOKEN}` } }
+    );
+    const { sha } = await fileRes.json();
+
+    // 2. 转 Base64
+    const content = btoa(unescape(encodeURIComponent(JSON.stringify(newAccounts, null, 2))));
+
+    // 3. 提交更新
+    await fetch(
+      `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/${FILE_PATH}`,
+      {
+        method: 'PUT',
+        headers: {
+          Authorization: `token ${GITHUB_TOKEN}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          message: '用户修改密码',
+          content,
+          sha
+        })
+      }
+    );
+  } catch (e) {
+    alert('本地修改成功，但同步云端失败');
+  }
+}
+
+window.onload = loadAccounts;
+</script>
 </body>
 </html>
